@@ -1,0 +1,53 @@
+# trocar apenas a url na linha correspondente ao label do Traefik
+services:
+  whatsupdocker:
+    image: fmartinou/whats-up-docker
+    container_name: wud
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 8004:3000
+    env_file:
+      - .env
+    environment:
+      - WUD_AUTH_BASIC_ADMIN_USER=${WUD_ADMIN_USER}
+      - WUD_AUTH_BASIC_ADMIN_HASH=${WUD_ADMIN_HASH}
+      - WUD_TRIGGER_SMTP_EXAMPLE_HOST=${SMTP_HOST}
+      - WUD_TRIGGER_SMTP_EXAMPLE_PORT=465
+      - WUD_TRIGGER_SMTP_EXAMPLE_USER=${SMTP_USER}
+      - WUD_TRIGGER_SMTP_EXAMPLE_PASS=${SMTP_PASS}
+      - WUD_TRIGGER_SMTP_EXAMPLE_FROM=${SMTP_USER}
+      - WUD_TRIGGER_SMTP_EXAMPLE_TO=${SMTP_TO}
+      - WUD_TRIGGER_SMTP_EXAMPLE_TLS_ENABLED=true
+      - WUD_TRIGGER_SMTP_EXAMPLE_TLS_VERIFY=true
+      - WUD_REGISTRY_HUB_TOKEN=${DOCKERHUB_TOKEN}
+      - WUD_WATCHER_LOCAL_CRON=0 1 * * *
+      - WUD_WATCHER_LOCAL_WATCHALL=true
+      - WUD_TRIGGER_SMTP_EXAMPLE_MODE=simple
+      - WUD_TRIGGER_SMTP_EXAMPLE_ONCE=true
+      - WUD_TRIGGER_SMTP_EXAMPLE_SIMPLETITLE=WUD Advise - ${FROMSERVER} Server
+      - WUD_TRIGGER_SMTP_EXAMPLE_SIMPLEBODY=Container $${name} can be updated from version $${local} to version $${remote}
+    networks:
+      - app-network
+    restart: always
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.whatsupdocker.rule=Host(`${URLAPP}`)'
+      - 'traefik.http.routers.whatsupdocker.tls=true'
+      - 'traefik.http.routers.whatsupdocker.entrypoints=websecure'
+      - 'traefik.http.routers.whatsupdocker.tls.certresolver=lets-encrypt'
+      - 'traefik.http.middlewares.whatsupdocker.headers.SSLRedirect=true'
+      - 'traefik.http.middlewares.whatsupdocker.headers.STSSeconds=315360000'
+      - 'traefik.http.middlewares.whatsupdocker.headers.browserXSSFilter=true'
+      - 'traefik.http.middlewares.whatsupdocker.headers.contentTypeNosniff=true'
+      - 'traefik.http.middlewares.whatsupdocker.headers.forceSTSHeader=true'
+      - 'traefik.http.middlewares.whatsupdocker.headers.SSLHost=${SSL_DOMAIN}'
+      - 'traefik.http.middlewares.whatsupdocker.headers.STSIncludeSubdomains=true'
+      - 'traefik.http.middlewares.whatsupdocker.headers.STSPreload=true'
+      - 'traefik.http.routers.whatsupdocker.middlewares=whatsupdocker@docker'
+      - "traefik.port=8004"
+
+networks:
+  app-network:
+    external: true

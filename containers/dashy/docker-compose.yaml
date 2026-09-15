@@ -1,0 +1,53 @@
+# https://github.com/Lissy93/dashy
+# ======================================================
+#
+# Modelo de docker-compose para Dashy com Traefik
+#
+# ======================================================
+services:
+  dashy:
+    container_name: dashy
+    image: lissy93/dashy:latest
+
+    volumes:
+      - "./conf/conf.yml:/app/public/conf.yml"
+      - "./icons:/app/public/item-icons"
+
+    ports:
+      - 8081:8080
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.dashy.rule=Host(`${URLAPP}`)'
+      - 'traefik.http.routers.dashy.tls=true'
+      - 'traefik.http.routers.dashy.entrypoints=websecure'
+      - 'traefik.http.routers.dashy.tls.certresolver=lets-encrypt'
+      - 'traefik.http.middlewares.dashy.headers.SSLRedirect=true'
+      - 'traefik.http.middlewares.dashy.headers.STSSeconds=315360000'
+      - 'traefik.http.middlewares.dashy.headers.browserXSSFilter=true'
+      - 'traefik.http.middlewares.dashy.headers.contentTypeNosniff=true'
+      - 'traefik.http.middlewares.dashy.headers.forceSTSHeader=true'
+      - 'traefik.http.middlewares.dashy.headers.SSLHost=${SSL_DOMAIN}'
+      - 'traefik.http.middlewares.dashy.headers.STSIncludeSubdomains=true'
+      - 'traefik.http.middlewares.dashy.headers.STSPreload=true'
+      - 'traefik.http.routers.dashy.middlewares=dashy@docker'
+      - "traefik.port=8080"
+
+    environment:
+      - NODE_ENV=production
+      - UID=1000
+      - GID=1000
+
+    restart: always
+
+    healthcheck:
+      test: ['CMD', 'node', '/app/services/healthcheck']
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true

@@ -1,0 +1,39 @@
+
+services:
+  wuzapi-server:
+    image: ${WUZAPI_IMAGE}
+    env_file:
+      - .env
+    ports:
+      - "8084:8080"
+    volumes:
+      - .env:/app/.env
+    environment:
+      - WUZAPI_ADMIN_TOKEN=${WUZAPI_ADMIN_TOKEN}
+      - DB_USER=${DB_USER:-wuzapi}
+      - DB_PASSWORD=${DB_PASSWORD:-wuzapi}
+      - DB_NAME=${DB_NAME:-wuzapi}
+      - DB_HOST=${DB_HOST:-127.0.0.1}
+      - DB_PORT=${DB_PORT:-5432}
+      - TZ=${TZ:-America/Sao_Paulo}
+      - WEBHOOK_FORMAT=${WEBHOOK_FORMAT:-json}
+      - SESSION_DEVICE_NAME=${SESSION_DEVICE_NAME:-WuzAPI}
+      # RabbitMQ configuration Optional
+      # - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:5673/%2F
+      # - RABBITMQ_QUEUE=wuzapi
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wuzapi.rule=Host(`${URLAPP}`)"
+      - "traefik.http.routers.wuzapi.tls=true"
+      - "traefik.http.services.wuzapi.loadbalancer.server.port=8080"
+      - "traefik.docker.network=app-network"
+    extra_hosts:
+      - "${RABBITMQ_HOST}:172.20.0.1"  # Mapeia o host para o gateway do Docker
+    networks:
+      - app-network
+    restart: on-failure
+
+networks:
+  app-network:
+    external: true
+
