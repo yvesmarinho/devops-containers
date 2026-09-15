@@ -1,0 +1,7 @@
+.env
+.secrets/*
+!.secrets/.gitkeep
+acme/*
+!acme/.gitkeep
+logs/*
+!logs/.gitkeep
