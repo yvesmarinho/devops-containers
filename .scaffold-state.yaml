@@ -1,0 +1,20 @@
+scaffold_version: 1.0.0
+created_at: '2026-09-15T13:56:40Z'
+updated_at: '2026-09-15T13:56:55Z'
+project:
+  name: devops-containers
+  title: Devops Containers
+  description: Central de configurações de containers, Dockerfiles e arquivos Docker
+    Compose para infraestrutura e serviços.
+  domain: infrastructure
+  language: python
+  github_repo: git@github.com:yvesmarinho/devops-containers.git
+  ai_assistant: claude
+paths:
+  target_dir: /home/yves_marinho/Documentos/DevOps/Projetos
+  shared_dir: /home/yves_marinho/Documentos/DevOps/.copilot-shared
+profiles_applied:
+- devops-infrastructure
+- devops-security
+template_versions: {}
+template_bases: {}
