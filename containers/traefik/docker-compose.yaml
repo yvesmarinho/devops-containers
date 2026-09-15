@@ -1,0 +1,113 @@
+# -------------------------------------------------------------------------
+# NOME.........: docker-compose.yaml
+# LANG.........: docker-compose
+# DESCRIÇÃO....: Traefik — reverse proxy / edge router com TLS automático (Let's Encrypt)
+# DATA.........: 08/01/2025
+# MODIFICADO...: 15/09/2026
+# VERSÃO.......: 1.1.00
+# OBS..........: Fonte única de verdade da config (static via `command`, dynamic via labels).
+#                 Não usa mais traefik.toml/traefik.yaml/traefik_dynamic.toml (removidos).
+#
+# DEPENDÊNCIAS.: .env (copiar de .env.example)
+#                 .secrets/traefik_users (htpasswd, gerado localmente — ver README.md)
+#                 acme/acme.json (criado por scripts/setup-network.sh, chmod 600)
+#                 rede externa "web" (criada por scripts/setup-network.sh)
+# -------------------------------------------------------------------------
+# Copyright (c) 2022 - Vya.Digital
+# This script is licensed under GNU GPL version 2.0 or above
+# -------------------------------------------------------------------------
+# Modifications.....:
+#  Date          Rev    Author           Description
+#  08/01/2025    0      Yves Marinho     Elaboração
+#  15/09/2026    1      Yves Marinho     Revisão de segurança: remove api.insecure,
+#                                        dashboard porta 9090 pública, secrets hardcoded,
+#                                        acme.json/chave privada versionados; consolida
+#                                        configs duplicadas em um único compose.
+#  15/09/2026    2      Yves Marinho     Atualiza imagem para traefik:v3.7 (LTS).
+# -------------------------------------------------------------------------
+# STATUS: PROD
+# -------------------------------------------------------------------------
+
+services:
+  traefik:
+    image: traefik:v3.7
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - "--global.checknewversion=false"
+      - "--global.sendanonymoususage=false"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      - "--log.level=INFO"
+      - "--log.format=json"
+      - "--log.filePath=/var/log/traefik/traefik.log"
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+      - "--accesslog.filePath=/var/log/traefik/access.log"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
+      - "--entryPoints.websecure.address=:443"
+      - "--providers.docker=true"
+      - "--providers.docker.network=web"
+      - "--providers.docker.exposedbydefault=false"
+      - "--certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesResolvers.letsencrypt.acme.storage=/acme.json"
+      - "--certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=web"
+    env_file:
+      - .env
+    environment:
+      - TZ=America/Sao_Paulo
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./acme/acme.json:/acme.json
+      - ./logs:/var/log/traefik
+      - ./.secrets/traefik_users:/run/secrets/traefik_users:ro
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+
+      # Dashboard: nunca exposto via api.insecure/porta 9090; só via HTTPS + basicAuth.
+      - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth,security-headers"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.usersfile=/run/secrets/traefik_users"
+
+      # Cabeçalhos de segurança reaproveitáveis por outros serviços (referenciar
+      # "traefik-security-headers@docker" nas labels do serviço).
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

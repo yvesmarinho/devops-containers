@@ -1,0 +1,99 @@
+# -------------------------------------------------------------------------
+# NOME.........: docker-compose.yaml
+# LANG.........: docker-compose
+# DESCRIÇÃO....: Modelo de serviço exposto via Traefik (containers/traefik)
+# DATA.........: 03/03/2023
+# MODIFICADO...: 15/09/2026
+# VERSÃO.......: 2.0.00
+# OBS..........: Template — não subir direto. Preencher os campos indicados
+#                 abaixo manualmente ou com scripts/apply-placeholders.sh
+#                 antes de rodar `docker compose up`. Detalhes de cada campo
+#                 em README.md (seção "Placeholders").
+#
+# DEPENDÊNCIAS.: rede externa "web" (criada em containers/traefik/scripts/setup-network.sh)
+# -------------------------------------------------------------------------
+# Copyright (c) 2023 - Vya.Digital
+# This script is licensed under GNU GPL version 2.0 or above
+# -------------------------------------------------------------------------
+# Modifications.....:
+#  Date          Rev    Author           Description
+#  03/03/2023    0      Yves Marinho     Elaboração
+#  15/09/2026    1      Yves Marinho     Revisão de segurança: remove nome de
+#                                        serviço via ${VAR} (Compose não resolve
+#                                        variáveis em chaves — quebrava o arquivo),
+#                                        remove labels obsoletas da API v1 do
+#                                        Traefik (SSLRedirect/SSLHost/
+#                                        traefik.port), remove publicação direta
+#                                        da porta da app no host (bypassa o proxy),
+#                                        alinha rede ("web") e certresolver
+#                                        ("letsencrypt") ao setup atual do Traefik.
+#  15/09/2026    2      Yves Marinho     Corrige regressão: volta a usar um
+#                                        middleware de headers próprio por
+#                                        serviço (antes referenciava
+#                                        "security-headers@docker", definido
+#                                        só no compose do containers/traefik —
+#                                        se o app subir sem esse container
+#                                        específico no ar, o router fica
+#                                        inválido e a app fica inacessível).
+#                                        Também reinsere "forceSTSHeader",
+#                                        removido por engano (esse campo
+#                                        continua válido no Traefik v2/v3,
+#                                        diferente de SSLRedirect/SSLHost).
+# -------------------------------------------------------------------------
+# STATUS: DEV
+# -------------------------------------------------------------------------
+
+services:
+  {{PROJECT_NAME}}:
+    image: {{IMAGE}}
+    container_name: {{PROJECT_NAME}}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: false # true se a imagem suportar filesystem somente leitura
+    # user: "1000:1000"          # descomentar e ajustar UID:GID para rodar sem root
+
+    # env_file:
+    #   - .env
+
+    # environment:
+    #   - CHAVE=valor
+
+    # volumes:
+    #   - ./data:/app/data
+
+    # Não publicar a porta da app no host (ports:) — o Traefik acessa o
+    # container pela rede interna "web"; publicar a porta direto no host
+    # burla o proxy (perde TLS, auth e demais middlewares).
+    expose:
+      - "{{APP_PORT}}"
+
+    networks:
+      - web
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+
+      - "traefik.http.routers.{{PROJECT_NAME}}.rule=Host(`{{SUBDOMAIN}}.{{DOMAIN_NAME}}`)"
+      - "traefik.http.routers.{{PROJECT_NAME}}.entrypoints=websecure"
+      - "traefik.http.routers.{{PROJECT_NAME}}.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.{{PROJECT_NAME}}.middlewares={{PROJECT_NAME}}-headers@docker"
+
+      # Middleware de headers de segurança próprio deste serviço — não depende
+      # de nenhum middleware definido em outro compose/projeto, então continua
+      # funcionando mesmo se este app subir isolado em outra rede/host.
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.{{PROJECT_NAME}}-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+
+      - "traefik.http.services.{{PROJECT_NAME}}.loadbalancer.server.port={{APP_PORT}}"
+
+networks:
+  web:
+    external: true

@@ -45,10 +45,39 @@ devops-containers/
 ├── .github/            # CI/CD, agentes SpecKit
 ├── .secrets/           # Credenciais locais (não versionado, chmod 700)
 ├── .vscode/            # VS Code: settings, MCP, extensions
+├── containers/         # Dockerfiles, docker-compose.yml e afins, um subdiretório por serviço
+│   └── <servico>/
+│       ├── Dockerfile
+│       ├── docker-compose.yml
+│       └── .env.example
 ├── docs/               # Documentação (INDEX, TODO, SESSIONS)
 ├── scripts/            # Scripts de automação
-└── src/                # Código-fonte
+└── src/                # Código-fonte Python (automação/tooling, não configs de container)
 ```
+
+`containers/` é o diretório central deste projeto: concentra as definições de
+imagens e orquestração (Dockerfiles, `docker-compose.yml`, `.env.example`) por
+serviço, mantendo `src/` reservado a código Python de apoio (scripts de build,
+validação de compose, etc.), conforme a regra global de organização por
+responsabilidade.
+
+## Memória Persistente — Vault Obsidian
+
+Este projeto segue a regra global de memória persistente (`~/.claude/CLAUDE.md`):
+o vault `/home/yves_marinho/Documentos/DevOps/claude_memory/claude_memory` é a
+memória entre sessões, acessada via MCP `obsidian-rest` (escopo `user`).
+
+- `memory/profile.md` — perfil do usuário
+- `memory/preferences.md` — preferências de comportamento
+- `memory/infra-stack.md` — stack de infraestrutura administrada
+- `00-index.md` — índice mestre (MOC)
+- `projects/devops-containers.md` — nota temática deste projeto (arquitetura,
+  decisões, integração com `graphify-out/` quando existir)
+
+Fatos duráveis aprendidos neste projeto (decisões técnicas, mudanças
+arquiteturais) devem ser gravados nesse vault, nunca em `docs/SESSIONS/`
+apenas — seguir as regras de append/edição pontual do `CLAUDE.md` do vault
+(nunca sobrescrever nota inteira sem confirmar).
 
 ## Sessões de Trabalho
 
