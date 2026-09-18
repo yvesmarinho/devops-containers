@@ -1,0 +1,53 @@
+# Versão docker: latest
+# Reference: https://containrrr.dev/watchtower/
+#
+# Stag: Prod
+# Modifications.....:
+# Date          Rev    Author            Description
+# 22/01/2025     0     Yves Marinho      Inicio da documentação
+services:
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    environment:
+      - TZ=America/Sao_Paulo
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_DEBUG=true
+      - WATCHTOWER_HTTP_API_METRICS=true
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_API_TOKEN}
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_LOG_LEVEL=debug
+      - WATCHTOWER_LOG_FORMAT=json
+      - WATCHTOWER_NO_PULL=true
+      - WATCHTOWER_POLL_INTERVAL=600
+      - WATCHTOWER_REMOVE_VOLUMES=true
+      - WATCHTOWER_RUN_ONCE=true
+      - NO_COLOR=true
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.watchtower.rule=Host(`${URLAPP}`)'
+      - 'traefik.http.routers.watchtower.tls=true'
+      - 'traefik.http.routers.watchtower.entrypoints=websecure'
+      - 'traefik.http.routers.watchtower.tls.certresolver=lets-encrypt'
+      - 'traefik.http.middlewares.watchtower.headers.SSLRedirect=true'
+      - 'traefik.http.middlewares.watchtower.headers.STSSeconds=315360000'
+      - 'traefik.http.middlewares.watchtower.headers.browserXSSFilter=true'
+      - 'traefik.http.middlewares.watchtower.headers.contentTypeNosniff=true'
+      - 'traefik.http.middlewares.watchtower.headers.forceSTSHeader=true'
+      - 'traefik.http.middlewares.watchtower.headers.SSLHost=${SSL_DOMAIN}'
+      - 'traefik.http.middlewares.watchtower.headers.STSIncludeSubdomains=true'
+      - 'traefik.http.middlewares.watchtower.headers.STSPreload=true'
+      - 'traefik.http.routers.watchtower.middlewares=watchtower@docker'
+      - "traefik.port=8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 8081:8080
+    networks:
+      - app-network
+    restart: always
+
+networks:
+  app-network:
+    external: true

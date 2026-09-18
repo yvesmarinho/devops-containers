@@ -1,0 +1,43 @@
+# ======================================================
+#
+# Modelo de docker-compose para utilização com o Traefik
+#
+# ======================================================
+services:
+    adminer:
+        image: adminer
+        container_name: "${HOSTNAME}"
+        hostname: "${HOSTNAME}"
+        volumes:
+            - "/etc/localtime:/etc/localtime:ro"
+        environment:
+            - "TZ=America/Sao_Paulo"
+            - "ADMINER_DEFAULT_SERVER=${DB_HOST}"
+        restart: always
+        labels:
+            - 'traefik.enable=true'
+            - 'traefik.http.routers.adminer.rule=Host(`${URLAPP}`)'
+            - 'traefik.http.routers.adminer.tls=true'
+            - 'traefik.http.routers.adminer.entrypoints=websecure'
+            - 'traefik.http.routers.adminer.tls.certresolver=lets-encrypt'
+            - 'traefik.http.middlewares.adminer.headers.SSLRedirect=true'
+            - 'traefik.http.middlewares.adminer.headers.STSSeconds=315360000'
+            - 'traefik.http.middlewares.adminer.headers.browserXSSFilter=true'
+            - 'traefik.http.middlewares.adminer.headers.contentTypeNosniff=true'
+            - 'traefik.http.middlewares.adminer.headers.forceSTSHeader=true'
+            - 'traefik.http.middlewares.adminer.headers.SSLHost=${SSL_DOMAIN}'
+            - 'traefik.http.middlewares.adminer.headers.STSIncludeSubdomains=true'
+            - 'traefik.http.middlewares.adminer.headers.STSPreload=true'
+            - 'traefik.http.routers.adminer.middlewares=adminer@docker'
+            - "traefik.port=8081"
+        deploy:
+            resources:
+                limits:
+                    cpus: '2'  # Limitar a 2 CPUs
+                    memory: '4G'  # Limitar a 4 GB de memória
+        networks:
+            - app-network
+
+networks:
+    app-network:
+        external: true

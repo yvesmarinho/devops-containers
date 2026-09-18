@@ -1,0 +1,41 @@
+# ======================================================
+# Modelo de docker-compose para utilização com o Traefik
+# ======================================================
+services:
+  metabase:
+    image: metabase/metabase:${METABASE_VERSION}
+    container_name: "metabase"
+    volumes:
+      - /dev/urandom:/dev/random:ro
+    healthcheck:
+      test: curl --fail -I http://localhost:3000/api/health || exit 1
+      interval: 45s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - .env
+    ports:
+      - "3002:3000"
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.metabase.rule=Host(`${URLAPP}`)'
+      - 'traefik.http.routers.metabase.tls=true'
+      - 'traefik.http.routers.metabase.entrypoints=websecure'
+      - 'traefik.http.routers.metabase.tls.certresolver=lets-encrypt'
+      - 'traefik.http.middlewares.metabase.headers.SSLRedirect=true'
+      - 'traefik.http.middlewares.metabase.headers.STSSeconds=315360000'
+      - 'traefik.http.middlewares.metabase.headers.browserXSSFilter=true'
+      - 'traefik.http.middlewares.metabase.headers.contentTypeNosniff=true'
+      - 'traefik.http.middlewares.metabase.headers.forceSTSHeader=true'
+      - 'traefik.http.middlewares.metabase.headers.SSLHost=${SSL_DOMAIN}'
+      - 'traefik.http.middlewares.metabase.headers.STSIncludeSubdomains=true'
+      - 'traefik.http.middlewares.metabase.headers.STSPreload=true'
+      - 'traefik.http.routers.metabase.middlewares=metabase@docker'
+      - 'traefik.port=3000'
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true

@@ -1,0 +1,43 @@
+# ======================================================
+#
+# Modelo de conf.yml para Dashy
+# https://github.com/Lissy93/dashy
+#
+# ======================================================
+
+pageInfo:
+  title: Example Dashboard
+  description: Painel de exemplo — substitua pelos seus dados
+  navLinks:
+    - title: Company Site
+      path: https://example.com
+      target: newtab
+    - title: Documentation
+      path: https://docs.example.com
+      target: newtab
+  logo: https://example.com/images/logo_512x512.png
+
+appConfig:
+  theme: material-dark
+  layout: horizontal
+  language: pt
+  iconSize: medium
+  startingView: minimal
+  disableConfigurationForNonAdmin: true
+  auth:
+    users:
+      - user: admin@example.com
+        hash: CHANGE_ME_GENERATE_A_SHA256_HASH
+        type: admin
+  hideComponents:
+    hideSettings: true
+
+sections:
+  - name: Sistemas
+    icon: fas fa-server
+    items:
+      - title: Exemplo de Serviço
+        description: Descrição breve do serviço
+        icon: fas fa-cube
+        url: https://servico.example.com
+        target: newtab

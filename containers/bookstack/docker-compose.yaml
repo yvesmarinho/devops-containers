@@ -1,0 +1,57 @@
+# ======================================================
+#
+# Modelo de docker-compose para BookStack com Traefik
+#
+# ======================================================
+services:
+  bookstack:
+    image: linuxserver/bookstack:${BOOKSTACK_VERSION}
+    container_name: bookstack
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - APP_URL=https://${URLAPP}
+      - APP_KEY=${APP_KEY}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_DATABASE=${DB_DATABASE}
+      - ALLOWED_IFRAME_HOSTS="https://*.${SSL_DOMAIN}"
+      - ALLOWED_IFRAME_SOURCES="https://*.${SSL_DOMAIN}"
+      - ALLOWED_SSR_HOSTS="https://*.${SSL_DOMAIN}"
+      - HEADER_X_FRAME_OPTIONS="frame-ancestors 'self' https://*.${SSL_DOMAIN}"
+      - HEADER_CONTENT_SECURITY_POLICY="frame-ancestors 'self' https://*.${SSL_DOMAIN}"
+    volumes:
+      - ./bookstack_app_data:/config
+    ports:
+      - 8002:80
+    restart: always
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.bookstack.rule=Host(`${URLAPP}`)'
+      - 'traefik.http.routers.bookstack.tls=true'
+      - 'traefik.http.routers.bookstack.entrypoints=websecure'
+      - 'traefik.http.routers.bookstack.tls.certresolver=lets-encrypt'
+      - 'traefik.http.middlewares.bookstack.headers.SSLRedirect=true'
+      - 'traefik.http.middlewares.bookstack.headers.STSSeconds=315360000'
+      - 'traefik.http.middlewares.bookstack.headers.browserXSSFilter=true'
+      - 'traefik.http.middlewares.bookstack.headers.contentTypeNosniff=true'
+      - 'traefik.http.middlewares.bookstack.headers.forceSTSHeader=true'
+      - 'traefik.http.middlewares.bookstack.headers.SSLHost=${SSL_DOMAIN}'
+      - 'traefik.http.middlewares.bookstack.headers.STSIncludeSubdomains=true'
+      - 'traefik.http.middlewares.bookstack.headers.STSPreload=true'
+      - 'traefik.http.routers.bookstack.middlewares=bookstack@docker'
+      - 'traefik.frontend.headers.customResponseHeaders=Access-Control-Allow-Origin:*'
+      - "traefik.port=8002"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'  # Limitar a 2 CPUs
+          memory: '4G'  # Limitar a 4 GB de memória
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
